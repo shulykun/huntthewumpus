@@ -18,10 +18,6 @@ content_map = [
         'function':g_actions.shoot
     },
     {
-        'index':'выход',
-        'function':g_actions.exit
-    },
-    {
         'index':'старт',
         'function':g_actions.start
     },

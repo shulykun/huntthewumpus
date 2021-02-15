@@ -16,7 +16,6 @@ def make_dict(content_map):
 def vectorize(sequense, content_dict):
 
     sequense_vec= np.zeros(len(content_dict))
-
     for i in sequense.split(' '):
         if i in content_dict:
             sequense_vec[content_dict[i]] = sequense_vec[content_dict[i]]+1
