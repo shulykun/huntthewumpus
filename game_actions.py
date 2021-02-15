@@ -93,8 +93,10 @@ class Actions():
     def set_game_space(self):
         self.game_space = self.init_game_space()
 
+
     def set_game_objects(self):
         self.game_objects = self.init_game_objects(self.game_space)
+
 
     def set_game_user(self):
         self.game_user = self.init_user_state()
@@ -106,7 +108,6 @@ class Actions():
         self.set_game_space()
         self.set_game_objects()
         self.set_game_user()
-
 
 
     def append_history(self,room_to):
@@ -195,13 +196,10 @@ class Actions():
         return self.replics.move_room_holes(room_to, rooms_connect)
 
 
-
     def move_room_wampus(self, room_to, rooms_connect):
 
         self.game_user['lives'] -= 1
         return self.replics.move_room_wampus(room_to, rooms_connect)
-
-
 
 
     def move_check_room(self,room_to):
@@ -240,7 +238,6 @@ class Actions():
         return rooms_arrow_pass
 
 
-
     def shoot_check_rooms(self, rooms_arrow, player_room):
         '''Определение комнат через которые на самом деле пролетела стрела'''
 
@@ -265,7 +262,7 @@ class Actions():
 
         return rooms_arrow_pass, wrong_room
 
-    
+
     @check_active_user
     def shoot(self, input_seq):
         '''Управление полетом стрелы'''
@@ -276,8 +273,8 @@ class Actions():
         if len(rooms_arrow) == 5:
 
             if self.game_user['arrows'] > 0:
-                self.game_user['arrows'] -= 1
 
+                self.game_user['arrows'] -= 1
                 rooms_arrow_pass, wrong_room = self.shoot_check_rooms(rooms_arrow, player_room)
 
                 if wampus_room in rooms_arrow_pass:
@@ -299,6 +296,24 @@ class Actions():
 
 
         return response
+
+
+    def help(self, input_seq):
+        '''Выход из игры - сброс мира'''
+
+        r = '''В игре доступны команды:
+                Переход в комнату - надо указать номер смежной комнаты.
+                Выстрел из лука - надо указать номера 5 комнат через которые пролетит стрела.
+                Состояние - чтобы узнать сколько у вас стрел.'''
+        return r
+
+
+    def health(self, input_seq):
+        ''''''
+
+        r = '''У вас осталось {} стрел'''.format(self.game_user['arrows'])
+
+        return r
 
 
     def exit(self, input_seq):

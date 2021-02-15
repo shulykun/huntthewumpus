@@ -24,6 +24,14 @@ content_map = [
     {
         'index':'старт',
         'function':g_actions.start
+    },
+    {
+        'index':'помощь команды справка',
+        'function':g_actions.help
+    },
+    {
+        'index':'состояние',
+        'function':g_actions.health
     }
 ]
 
