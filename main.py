@@ -24,7 +24,7 @@ content_map = [
     {
         'index':'старт',
         'function':g_actions.start
-    },
+    }
 ]
 
 
