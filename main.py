@@ -50,5 +50,6 @@ def console_dialogue():
             print(r.strip())
         print('---')
 
+
 if __name__ == "__main__":
     console_dialogue()
