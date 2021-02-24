@@ -14,12 +14,19 @@ class Actions():
         self.game_spacegame_rooms = {}
         self.game_user = {}
 
+        self.n_rooms_bats = 2
+        self.n_rooms_holes = 2
+        self.n_rooms_troll = 1
+
 
     def init_user_state(self):
         '''Характеристики игрока'''
         a = {
              'arrows':5,
-             'lives':1
+             'lives':1,
+             'context':'',
+             'troll_game':[],
+             'blind':False
         }
 
         return a
@@ -48,36 +55,55 @@ class Actions():
             space.append([max_treshold(i+1,19,15), i-1, i-5])
         return space
 
+    def room_object(self, exclude_rooms, n_rooms=1):
+        r = []
+        while len(r) < n_rooms:
+            n = np.random.randint(self.rooms_count)
+            if n not in exclude_rooms:
+                r.append(n)
+        return r
+
 
     def init_game_objects(self,rooms):
         '''Расстановка объектов в игре'''
 
-        def room_object(exclude_rooms, n_rooms=1):
-            r = []
-            while len(r) < n_rooms:
-                n = np.random.randint(self.rooms_count)
-                if n not in exclude_rooms:
-                    r.append(n)
-            return r
+
 
         def rooms_exclude(g_objects):
             return [item for sublist in g_objects.values() for item in sublist]
 
-
         g_objects = {
-                     'wampus':room_object([])
+                     'wampus':self.room_object([]),
+                     'holes':[],
+                     'bats':[],
+                     'troll':[]
                     }
 
-        for i in ['holes','bats']:
-
-            g_objects[i] = room_object(rooms_exclude(g_objects), n_rooms=2)
+        for i in zip(['holes','bats','troll'], [self.n_rooms_bats, self.n_rooms_holes, self.n_rooms_troll]):
+            for j in range(i[1]):
+                g_objects[i[0]] = g_objects[i[0]]  + self.room_object(rooms_exclude(g_objects))
 
         for i in ['holes','bats','wampus']:
             g_objects[i+'_near'] = [item for sublist in [rooms[i] for i in g_objects[i]]  for item in sublist]
 
-        g_objects['player_history'] = room_object(rooms_exclude(g_objects))
+        g_objects['player_history'] = self.room_object(rooms_exclude(g_objects))
 
         return g_objects
+
+
+    def init_troll(self):
+
+        def rooms_exclude(g_objects):
+            return [item for sublist in g_objects.values() for item in sublist]
+
+        p = np.random.randint(10)
+        if p > 5:
+            if not self.game_objects['troll']:
+                self.game_objects['troll'] = self.room_object(rooms_exclude(self.game_objects))
+        if p > 5:
+            if self.game_objects['troll']:
+                self.game_objects['troll'] = []
+        return True
 
 
     def check_active_user(f):
@@ -92,9 +118,6 @@ class Actions():
 
     def set_game_space(self):
         self.game_space = self.init_game_space()
-
-
-    def set_game_objects(self):
         self.game_objects = self.init_game_objects(self.game_space)
 
 
@@ -106,7 +129,6 @@ class Actions():
         '''Создание мира игры - генерация лабиринта
             и размещение всех объектов - мыши, ямы, Вампус, игрок'''
         self.set_game_space()
-        self.set_game_objects()
         self.set_game_user()
 
 
@@ -120,16 +142,10 @@ class Actions():
 
         self.create_game_world()
         player_start_room = self.game_objects['player_history'][0]
+        response_status = self.replics.start_game()
+        response_room = self.move_check_room(player_start_room)
 
-        return self.replics.start_game(player_start_room,self.game_space[player_start_room])
-
-
-    def restart(self, input_seq):
-        '''Перезапуск игры'''
-        self.create_game_world()
-        player_start_room = self.game_objects['player_history'][0]
-
-        return self.replics.restart_game(player_start_room,self.game_space[player_start_room])
+        return '''{} # {}'''.format(response_status, response_room) #Сейчас вы находитесь в комнате {}. Вы можете перейти в смежные комнаты: {}.
 
 
     def not_found(self, input_seq):
@@ -137,10 +153,14 @@ class Actions():
 
         return self.replics.not_found()
 
+    # def cheat_code(self, input_seq):
+    #     '''чит код'''
+    #     return str(self.game_objects)
+
 
     @check_active_user
     def move_room(self, input_seq):
-        '''Переход в комнтау - обработка тектового запроса'''
+        '''Переход в комнтау - обработка текстового запроса'''
 
         n = v.find_numbers(input_seq)
 
@@ -157,8 +177,15 @@ class Actions():
         return response
 
 
+    def move_room_whereami(self, input_seq):
+        '''Напоминание где игрок'''
+
+        room_from = int(self.game_objects['player_history'][-1])
+        return self.move_check_room(room_from)
+
+
     def move_room_process(self, room_to, room_from, check_connection=True):
-        '''Фиксация перехода в комнату и проработка игровых послествий
+        '''Фиксация перехода в комнату и проработка игровых последствий
         - встреча с объектами, запись в историю'''
 
         if check_connection:
@@ -187,7 +214,7 @@ class Actions():
         response = self.move_room_process(room_forward, room_to, check_connection=False)
 
 
-        return '{} {}'.format(response_,response)
+        return '{} # {}'.format(response_,response)
 
 
     def move_room_holes(self, room_to, rooms_connect):
@@ -201,6 +228,17 @@ class Actions():
         self.game_user['lives'] -= 1
         return self.replics.move_room_wampus(room_to, rooms_connect)
 
+    def move_room_troll(self, room_to, rooms_connect):
+
+        # self.game_user['lives'] -= 1
+        return self.troll_talk('')
+
+
+    def move_room_complex(self, keys_list, room_to, rooms_connect):
+        '''переход в комнату где сразу несколько опасностей рядом'''
+
+        return self.replics.move_room_danger_near(keys_list, room_to, rooms_connect)
+
 
     def move_check_room(self,room_to):
         '''Проверка открытой игроком комнаты на все игровые предметы.
@@ -209,18 +247,36 @@ class Actions():
                        'wampus':self.move_room_wampus,
                        'holes':self.move_room_holes,
                        'bats':self.move_room_bats,
-                       'holes_near':self.replics.move_room_holes_near,
-                       'bats_near':self.replics.move_room_bats_near,
-                       'wampus_near':self.replics.move_room_wampus_near
-                    }
+                        'troll':self.move_room_troll
+                      }
+
 
         for c in check_state_func.keys():
             if room_to in self.game_objects[c]:
                 f = check_state_func[c]
-
                 return f(room_to, self.game_space[room_to])
 
-        return self.replics.move_room_empty(room_to, self.game_space[room_to])
+
+        check_state_near =  {
+                       'holes_near':self.replics.move_room_holes_near,
+                       'bats_near':self.replics.move_room_bats_near,
+                       'wampus_near':self.replics.move_room_wampus_near
+                      }
+        response_keys = []
+
+        for c in check_state_near.keys():
+            if room_to in self.game_objects[c]:
+                response_keys.append(c)
+
+        if len(response_keys) > 1:
+            return self.move_room_complex(response_keys, room_to, self.game_space[room_to])
+
+        elif len(response_keys) == 1:
+            f = check_state_near[response_keys[0]]
+            return f(room_to, self.game_space[room_to])
+
+        else:
+            return self.replics.move_room_empty(room_to, self.game_space[room_to])
 
 
     def shoot_random_rooms(self, rooms_arrow_pass, room_prev):
@@ -299,21 +355,138 @@ class Actions():
 
 
     def help(self, input_seq):
-        '''Выход из игры - сброс мира'''
+        '''Помощь'''
         return self.replics.help()
 
+    @check_active_user
+    def troll_talk(self, input_seq):
+        self.game_user['context'] = 'askgame'
+        return self.replics.troll_talk()
 
+
+    @check_active_user
+    def troll_start_game(self, input_seq):
+        if input_seq == 'да askgame':
+            self.game_user['context'] = 'startgame'
+            return self.replics.troll_start_game()
+
+        elif input_seq == 'нет askgame':
+            self.game_user['context'] = ''
+            self.game_user['arrows'] -= 1
+
+            response_room = self.move_check_room(int(self.game_objects['player_history'][-1]))
+            response_status = self.replics.troll_deny_game(self.game_user['arrows'])
+
+            return '{} ## {}'.format(response_status,response_room)
+
+        else:
+            return 'Я не понимаю твоего ответа. Да или нет?'
+
+
+    @check_active_user
+    def troll_game_restrict(self, input_seq):
+
+        return '''- Ты не можешь вот так прервать игру. Говори: камень, ножницы или бумага?'''
+
+
+    @check_active_user
+    def troll_game_play(self, input_seq):
+        '''процесс игры в камень ножницы бумага с троллем'''
+
+        res = {1:-1, 2:1, -1:1, -2:-1}
+
+        input_seq = input_seq.replace('startgame','').replace('_','').strip()
+
+        variants = ['камень', 'ножницы', 'бумага']
+
+        if input_seq in variants:
+
+            i = variants.index(input_seq)
+            j = i
+            while j == i:
+                j = np.random.randint(3)
+            r = i - j
+
+            self.game_user['troll_game'].append(res[r])
+
+            if len(self.game_user['troll_game']) > 2:
+
+                self.game_user['context'] = ''
+                s = sum(self.game_user['troll_game'])
+                self.game_user['troll_game'] = []
+
+                if s> 0:
+                    return self.troll_win_game()
+                else:
+                    return self.troll_loose_game()
+            else:
+                return self.replics.troll_comment_game(res[r], variants[j])
+                # return self.str([res[r], variants[i], variants[j]])
+        else:
+            return input_seq
+
+
+    def troll_loose_game(self):
+
+        self.game_user['arrows'] -= 1
+
+
+        response_status = self.replics.troll_loose_game(self.game_user['arrows'])
+
+        if self.game_user['arrows'] > 0:
+            room_from = int(self.game_objects['player_history'][-1])
+            response_room = self.move_check_room(room_from)
+        else:
+            response_room = self.replics.game_over()
+
+        return '{} ## {}'.format(response_status,response_room)
+
+
+    def troll_win_game(self):
+
+        o = ['holes','bats']
+        i = np.random.randint(len(o))
+        object = o[i]
+        rooms = self.game_objects[object]
+        i = np.random.randint(len(rooms))
+        room = rooms[i]
+        response_status =  self.replics.troll_win_game(object,room)
+
+        room_from = int(self.game_objects['player_history'][-1])
+        response_room = self.move_check_room(room_from)
+
+        return '{} ## {}'.format(response_status,response_room)
+
+
+
+    @check_active_user
     def health(self, input_seq):
         ''''''
         r = '''У вас осталось {} стрел'''.format(self.game_user['arrows'])
         return r
 
 
-    def exit(self, input_seq):
+    @check_active_user
+    def exit_ask(self, input_seq):
         '''Выход из игры - сброс мира'''
 
-        self.game_objects = {}
-        self.game_spacegame_rooms = {}
-        self.game_user = {}
+        # self.game_objects = {}
+        # self.game_spacegame_rooms = {}
+        self.game_user['context'] = 'exit'
 
-        return 'Вы вышли из игры'
+        return 'Хотите выйти из игры? (да или нет)'
+
+
+    @check_active_user
+    def exit_confirm(self, input_seq):
+        '''Выход из игры - сброс мира'''
+        self.game_user['context'] = ''
+
+        return 'exit'
+
+    @check_active_user
+    def exit_cancel(self, input_seq):
+        '''Выход из игры - сброс мира'''
+        self.game_user['context'] = ''
+
+        return 'Продолжаем игру!'
