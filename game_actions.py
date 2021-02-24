@@ -466,7 +466,6 @@ class Actions():
         return r
 
 
-    @check_active_user
     def exit_ask(self, input_seq):
         '''Выход из игры - сброс мира'''
 
@@ -477,12 +476,11 @@ class Actions():
         return 'Хотите выйти из игры? (да или нет)'
 
 
-    @check_active_user
     def exit_confirm(self, input_seq):
         '''Выход из игры - сброс мира'''
         self.game_user['context'] = ''
-
         return 'exit'
+
 
     @check_active_user
     def exit_cancel(self, input_seq):
