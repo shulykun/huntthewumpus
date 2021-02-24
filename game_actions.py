@@ -67,8 +67,6 @@ class Actions():
     def init_game_objects(self,rooms):
         '''Расстановка объектов в игре'''
 
-
-
         def rooms_exclude(g_objects):
             return [item for sublist in g_objects.values() for item in sublist]
 
@@ -153,9 +151,9 @@ class Actions():
 
         return self.replics.not_found()
 
-    # def cheat_code(self, input_seq):
-    #     '''чит код'''
-    #     return str(self.game_objects)
+    def cheat_code(self, input_seq):
+        '''чит код'''
+        return str(self.game_objects)
 
 
     @check_active_user
@@ -319,6 +317,18 @@ class Actions():
         return rooms_arrow_pass, wrong_room
 
 
+    def wampus_change_room(self):
+        '''вампус просыпается и переходит в соседнюю комнату'''
+
+        wampus_room = self.game_objects['wampus'][0]
+        i = np.random.randint(3)
+        wampus_new_room = self.game_objects['wampus_near'][i]
+
+        self.game_objects['wampus'] = [wampus_new_room]
+        self.game_objects['wampus_near'] = self.game_space[wampus_new_room]
+
+        # print(['''вампус переходит в соседнюю комнату''', wampus_new_room])
+
     @check_active_user
     def shoot(self, input_seq):
         '''Управление полетом стрелы'''
@@ -334,6 +344,7 @@ class Actions():
                 rooms_arrow_pass, wrong_room = self.shoot_check_rooms(rooms_arrow, player_room)
 
                 if wampus_room in rooms_arrow_pass:
+                    self.game_user['lives'] -=1
                     return self.replics.shoot_wampus_killed(rooms_arrow_pass,wampus_room)
 
                 if player_room in rooms_arrow_pass:
@@ -350,6 +361,7 @@ class Actions():
         else:
             response = self.replics.shoot_wrong_input()
 
+        self.wampus_change_room()
 
         return response
 

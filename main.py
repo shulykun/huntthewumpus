@@ -14,7 +14,7 @@ content_map = [
         'function':g_actions.move_room
     },
     {
-        'index':'стрелять стрела стреляю запускать_стрела',
+        'index':'стрелять стрела стреляю выстрел запускать_стрела',
         'function':g_actions.shoot
     },
     {
@@ -45,10 +45,10 @@ content_map = [
         'index':'нет_exit',
         'function':g_actions.exit_cancel
     },
-    # {
-    #     'index':'карта',
-    #     'function':g_actions.cheat_code
-    # },
+    {
+        'index':'карта',
+        'function':g_actions.cheat_code
+    },
     {
         'index':'да_askgame нет_askgame askgame',
         'function':g_actions.troll_start_game
